@@ -1,0 +1,11 @@
+**.log
+**.sql
+**.ini
+*CREDENTIALS*
+__pycache__
+cli.py
+**errors.txt
+**.ipynb
+/.ipynb_checkpoints
+downloads/
+songRecords.json
