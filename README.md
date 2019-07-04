@@ -6,11 +6,12 @@ Not wanting to miss out on all the other great songs KUTX plays, I decided to bu
 
 **Every day, this program downloads a random selection of 250 songs that were played on KUTX at some point between 2014-2019.**
 
-Here's an overview of the script:
+Here's an overview of the program:
 
-1. A one-time script is initially run which makes a series of Requests to KUTX's online Playlist API.  This compiles the JSON file of all songs played between 2014-2019.  (20mb file)
+First, a one-time script is initially run which makes a series of Requests to KUTX's online Playlist API.  This compiles the JSON file of all songs played between 2014-2019 (20mb file).  Then each day, the program runs the following:
+
 1. The program selects 250 random songs from the JSON list, and initiates multiple threads to begin process of gathering songs.
-1. Each thread iterates through the list, grabbing a single song.
+1. Each thread iterates through the list, grabbing a single song and checking that it hasn't already been downloaded.
 1. The song information is converted and encoded into a YouTube search query URL that is likely to contain the target song in the first search result.  (For example, "Sisyphus" by Andrew Bird becomes "https://www.youtube.com/results?search_query=andrew+bird+-+sisyphus")
 1. Request is made to YouTube and the first result's video URL is saved
 1. Video URL is sent through RapidAPI service which converts the video to audio
