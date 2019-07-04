@@ -1,7 +1,6 @@
 **.log
 **.sql
 **.ini
-*CREDENTIALS*
 __pycache__
 cli.py
 **errors.txt

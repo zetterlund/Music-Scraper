@@ -1,4 +1,5 @@
 import concurrent.futures
+import configparser
 import json
 import logging
 import os
@@ -22,6 +23,12 @@ debug = logging.getLogger('debug')
 debug.setLevel('DEBUG')
 debug.addHandler(handler)
 debug.addHandler(logging.StreamHandler())
+
+''' Read API credentials '''
+config = configparser.ConfigParser()
+config.read('credentials.ini')
+apiHost = str(config['credentials']['host'])
+apiKey = str(config['credentials']['key'])
 
 
 def getQuery(song):
@@ -49,13 +56,19 @@ def getDownloadURL(song):
     youtubeURL = urllib.parse.quote_plus(youtubeURL)
     apiURL = 'https://getvideo.p.rapidapi.com/?url={}'.format(youtubeURL)
     apiHeaders = {
-        "X-RapidAPI-Host": "getvideo.p.rapidapi.com",
-        "X-RapidAPI-Key": "cb7f3d9e29msh9e69eb6221f3571p16281cjsn244a3c23ca7b"
+        "X-RapidAPI-Host": apiHost,
+        "X-RapidAPI-Key": apiKey
     }
     response = requests.get(apiURL, headers=apiHeaders)
     response = json.loads(response.text)
 
     downloadURL = None
+
+    # API has not been working recently; check if error message returned
+    status = response.get('message', None)
+    if status == 'Failed to get info':
+        return "API Failed"
+
     for stream in response['streams']:
         if stream['format'] == 'audio only' and stream['extension'] == 'm4a':
             downloadURL = stream['url']
@@ -77,7 +90,6 @@ def downloadSong(song, downloadURL):
             debug.error("Failed to create directory.  Error: {}".format(e))
 
     urlretrieve(downloadURL, os.path.join(directory, fileName))
-
 
     # Set audio file metadata
     with dub_lock:
@@ -103,31 +115,19 @@ def downloadSong(song, downloadURL):
         time.sleep(0.5)
 
 
-def songAlreadyExists(song):
-    with lock:
-        for record in recordList:
-            if record['outcome'] == "success":
-                if record['artistName'] == song['artistName'] and record['trackName'] == song['trackName']:
-                    debug.info("Duplicate song found. Skipping song: Artist: {}. Track: {}.".format(record['artistName'], record['trackName']))
-                    return True
-                elif record['videoURL'] == song['videoURL']:
-                    debug.info("Duplicate Video URL found. (song['videoURL']={}) Skipping song: Artist: {}. Track: {}.".format(song['videoURL'], record['artistName'], record['trackName']))
-                    return True
-                elif record['id'] == song['id']:
-                    debug.info("Duplicate song ID found.  ID: {}".format(song['id']))
-                    return True
-        return False
-
-
 def getSong(name):
     try:
         debug.debug("Beginning getSong for index: {}".format(name))
-        song = recordList[name]
+        song = potentialSongs[name]
         song['query'] = getQuery(song)
         song['videoURL'] = getVideoURL(song['query'])
         downloadURL = getDownloadURL(song)
-        downloadSong(song, downloadURL)
-        song['outcome'] = "success"
+        if downloadURL == "API Failed":
+            song['outcome'] = "api-failure"
+            debug.warning("API failed to retrieve song for index: {}".format(name))
+        else:
+            downloadSong(song, downloadURL)
+            song['outcome'] = "success"
     except Exception as e:
         song['outcome'] = "error"
         debug.error("Problem encountered in 'getSong' function.\nError: {}\nSong: {}\n".format(e, song))
@@ -137,42 +137,58 @@ def getSong(name):
         debug.debug("Finished getSong for index: {}.  Outcome: {}".format(name, song['outcome']))
 
 
-def getSongList():
-    headers = {
-        'Accept': 'application/json, text/javascript, */*; q=0.01',
-        'DNT': '1',
-        'Origin': 'https://kutx.org',
-        'Referer': 'https://kutx.org/playlist',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.80 Safari/537.36'
-    }
-    response = requests.get("https://api.composer.nprstations.org/v1/widget/50ef24ebe1c8a1369593d032/day?date={}&format=json".format(scrapeDate))
-    page = json.loads(response.text)
-    songList = []
-    stationName = 'KUTX'
-    for program in page['onToday']:
-        programName = program['program']['name']
-        if program['playlist']:
-            for track in program['playlist']:
-                try:
-                    song = dict()
-                    song['programName'] = programName
-                    song['collectionName'] = track.get('collectionName', 'NONE')
-                    song['trackName'] = track.get('trackName', 'NONE')
-                    song['artistName'] = track.get('artistName', 'NONE')
-                    song['id'] = track.get('_id', 'NONE')
-                    song['datePlayed'] = scrapeDate
-                    song['stationName'] = stationName
-                    songList.append(song)
-                except Exception as e:
-                    debug.warning("Couldn't add song to songList.\nError: {}\nTrack: {}\n".format(e, track))
-    return songList
+
+''' Old, unnecessary functions '''
+# def songAlreadyExists(song):
+#     with lock:
+#         for record in recordList:
+#             if record['outcome'] == "success":
+#                 if record['artistName'] == song['artistName'] and record['trackName'] == song['trackName']:
+#                     debug.info("Duplicate song found. Skipping song: Artist: {}. Track: {}.".format(record['artistName'], record['trackName']))
+#                     return True
+#                 elif record['videoURL'] == song['videoURL']:
+#                     debug.info("Duplicate Video URL found. (song['videoURL']={}) Skipping song: Artist: {}. Track: {}.".format(song['videoURL'], record['artistName'], record['trackName']))
+#                     return True
+#                 elif record['id'] == song['id']:
+#                     debug.info("Duplicate song ID found.  ID: {}".format(song['id']))
+#                     return True
+#         return False
+# def getSongList():
+#     headers = {
+#         'Accept': 'application/json, text/javascript, */*; q=0.01',
+#         'DNT': '1',
+#         'Origin': 'https://kutx.org',
+#         'Referer': 'https://kutx.org/playlist',
+#         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.80 Safari/537.36'
+#     }
+#     response = requests.get("https://api.composer.nprstations.org/v1/widget/50ef24ebe1c8a1369593d032/day?date={}&format=json".format(scrapeDate))
+#     page = json.loads(response.text)
+#     songList = []
+#     stationName = 'KUTX'
+#     for program in page['onToday']:
+#         programName = program['program']['name']
+#         if program['playlist']:
+#             for track in program['playlist']:
+#                 try:
+#                     song = dict()
+#                     song['programName'] = programName
+#                     song['collectionName'] = track.get('collectionName', 'NONE')
+#                     song['trackName'] = track.get('trackName', 'NONE')
+#                     song['artistName'] = track.get('artistName', 'NONE')
+#                     song['id'] = track.get('_id', 'NONE')
+#                     song['datePlayed'] = scrapeDate
+#                     song['stationName'] = stationName
+#                     songList.append(song)
+#                 except Exception as e:
+#                     debug.warning("Couldn't add song to songList.\nError: {}\nTrack: {}\n".format(e, track))
+#     return songList
 
 
-
+debug.debug("Setting scrape date ranges")
 scrapeDate = date.today() - timedelta(days=2)
 scrapeDate = scrapeDate.strftime('%Y-%m-%d')
 
-
+# Define locks for threading
 os_lock = threading.Lock()
 dub_lock = threading.Lock()
 lock = threading.Lock()
@@ -183,21 +199,27 @@ lock = threading.Lock()
 with open('songRecords.json') as json_file:
     recordList = json.load(json_file)
 
-# Remove songs that have already been captured
-for song in list(recordList):
-    if song['outcome']:
-        recordList.remove(song)
+potentialSongs = recordList.copy()
+
+# Remove songs that have already been captured or that we don't want
+debug.debug("Removing songs we don't want to capture from list")
+for song in list(potentialSongs):
+    if song.get('outcome', None) not in [None, "api-failure"] or song['stationName'] == 'KCRW':
+        potentialSongs.remove(song)
 
 # Get list of indexes of random X songs to capture
+debug.debug("Getting indexes of random X number of songs to capture")
 song_indexes = set()
-for i in range(300):
-    song_indexes.add(random.randint(1,len(recordList)))
+for i in range(150):
+    song_indexes.add(random.randint(1,len(potentialSongs)))
 song_indexes = list(song_indexes)
 
 # Execute getSong functions
+debug.debug("Now beginning to execute ThreadPool")
 with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
     executor.map(getSong, song_indexes)
 
 # Save record list
+debug.debug("All finished.  Now saving the updated recordList.")
 with open('songRecords.json', 'w') as outfile:
     json.dump(recordList, outfile)
