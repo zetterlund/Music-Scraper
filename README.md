@@ -1,6 +1,6 @@
-﻿## Automatic Music Library Expander
+﻿# Automatic Music Library Expander
 
-One evening, while driving home from work, I tuned into KUTX 98.9 FM and my ears were greeted by a wonderful song: "Sisyphus" by Andrew Bird.
+One evening, while driving home from work, I tuned into KUTX 98.9 FM and my ears were greeted by a wonderful song: ["Sisyphus" by Andrew Bird](https://www.youtube.com/watch?v=5-KOZl5CLbU).
 
 Not wanting to miss out on all the other great songs KUTX plays, I decided to build a program to directly add their songs to my computer.
 
