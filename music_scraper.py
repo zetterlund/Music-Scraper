@@ -63,10 +63,9 @@ def getDownloadURL(song):
     if status == 'Failed to get info':
         return "API Failed"
 
-    for stream in response['streams']:
-        if stream['format'] == 'audio only (tiny)' and stream['extension'] == 'm4a':
-            downloadURL = stream['url']
-            return downloadURL
+    # (There are several streams in the response; just grab the first one)
+    downloadURL = response['streams'][0]['url']
+    return downloadURL
 
     # If proper stream not found in response, return error
     return "Stream not found"
