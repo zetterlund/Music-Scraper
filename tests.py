@@ -4,13 +4,9 @@ from music_scraper import *
 lock = threading.Lock()
 os_lock = threading.Lock()
 
-
-
 def test_threads_exec(i):
     with lock:
         time.sleep(0.5)
-
-
 
 class TestScript(unittest.TestCase):
 
@@ -34,14 +30,14 @@ class TestScript(unittest.TestCase):
         end = datetime.now()
         self.assertTrue((end-start).total_seconds() > 2.5)
 
-
-
 class TestScraper(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
         with open('songRecords.json') as json_file:
             cls.recordList = json.load(json_file)
+        cls.song = None
+        cls.downloadURL = None
 
     @classmethod
     def tearDownClass(cls):
@@ -51,15 +47,19 @@ class TestScraper(unittest.TestCase):
         song = self.recordList[46987]
         song['query'] = getQuery(song)
         song['videoURL'] = getVideoURL(song['query'])
+        downloadURL = getDownloadURL(song)
+        self.assertNotIn(downloadURL, [None, 'API Failed', 'Stream not found'])
+        self.song = song
         self.downloadURL = getDownloadURL(song)
-        self.assertNotIn(self.downloadURL, [None, 'API Failed', 'Stream not found'])
 
-    def test_downloader(self):
-        result = downloadSong(song, downloadURL)
+    def testdownloader(self):
+        result = downloadSong(self.song, self.downloadURL)
         if result == "dub failure":
             song['outcome'] = "dub-failure"
         else:
             song['outcome'] = "success"
+
+    # Not currently working properly as tests are interdependent and need to be executed in the correct order (i.e. test api service, and then test downloader)
 
 
 
