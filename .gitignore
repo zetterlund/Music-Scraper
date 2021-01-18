@@ -8,5 +8,6 @@ cli.py
 /.ipynb_checkpoints
 downloads/
 songRecords.json
+URLs.json
 documentation.txt
 venv/

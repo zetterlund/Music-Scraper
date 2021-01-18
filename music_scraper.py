@@ -33,15 +33,9 @@ def getQuery(song):
 
 def getVideoURL(query):
     response = requests.get('https://www.youtube.com/results?search_query={}'.format(query))
-    # page = html.fromstring(response.text)
-
     pattern = re.compile('"videoRenderer":{"videoId":"(.*?)"')
-    m = re.search(pattern, response.text)
-    videoURL = m.group(1)
-
-    # videoURL = page.xpath('//ol[@class="item-section"]//li/div[contains(@class, "yt-lockup-video")]')[0].xpath('.//h3[contains(@class, "yt-lockup-title")]//a/@href')[0]
-    # videoURL = re.sub(r'^.*?watch\?v=(.*)', r'\1', videoURL)
-
+    match = re.search(pattern, response.text)
+    videoURL = match.group(1)
     return videoURL
 
 
