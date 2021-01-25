@@ -204,10 +204,15 @@ def getSong():
     
     # Select one random song from database
     with db_lock:
-        song = session.query(Song).filter(Song.downloaded == False, Song.status == None).order_by(func.random()).first()
+        
+        # Select a random station
+        station = random.choice(['KBPA', 'W249AR', 'WQNQHD2', 'KUTX'])
+        
+        song = session.query(Song).filter(Song.downloaded == False, Song.status == None, Song.station == station).order_by(func.random()).first()
 
         # (If no song is found, cancel the process)
         if not song:
+            debug.warning("No song found when looking in station {}.".format(station))
             with lock:
                 SUCCESSFUL_SONGS += 1
             return
