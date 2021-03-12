@@ -103,8 +103,17 @@ def convert_duration(duration):
 
 # Combine track and artist in lowercase to check for uniqueness among variations in database
 def convert_to_slug(track, artist):
-    track = re.sub(r'[^a-zA-Z0-9]', '', track).lower()
-    artist = re.sub(r'[^a-zA-Z0-9]', '', artist).lower()
+    
+    track = track.lower()
+    track = re.sub(r'(?<!\w)the(?!\w)', '', track)
+    track = re.sub(r'[^a-zA-Z0-9]', '', track)
+    track = track[:20]
+    
+    artist = artist.lower()
+    artist = re.sub(r'(?<!\w)the(?!\w)', '', artist)
+    artist = re.sub(r'[^a-zA-Z0-9]', '', artist)
+    artist = artist[:20]
+    
     slug = track + artist
     return slug
 
